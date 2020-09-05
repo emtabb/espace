@@ -4,7 +4,7 @@
 - Require: go runtime environment 1.14 or higher.
 
 ```terminal
-go get github.com/emtabb/espace.
+go get github.com/emtabb/espace
 ```
 
 ### II. Document the method
