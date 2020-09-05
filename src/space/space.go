@@ -396,7 +396,7 @@ func (s *SpaceStructure) SearchElement(key string, value interface {}) *Element 
 	return s.elements[position]
 }
 
-func (s *SpaceStructure) Search(key string, value interface {}) interface {} {
+func (s *SpaceStructure) Search(key string, value interface {}) []interface {} {
 	return nil
 }
 
