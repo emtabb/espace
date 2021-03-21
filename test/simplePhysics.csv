@@ -1,0 +1,10 @@
+Particle,Coordinate,Vector,Time
+e,1,2,30
+e-,2,4,"3.4"
+sse,3,6,3
+mu,4,8,3
+mu-,5,10,3
+ssmu,6,12,3
+t,7,14,3
+tbar,8,16,3
+sst,9,18,10
