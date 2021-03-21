@@ -2,7 +2,7 @@ package espace
 
 import (
 	. "github.com/emtabb/field"
-	. "github.com/emtabb/espace/src/element"	
+	. "github.com/emtabb/state"
 )
 
 /*
@@ -21,38 +21,40 @@ type ESpace interface {
 	*	- Save() save all information of properties to data storage. In this version itnot working.
 	*/
 	Init() ESpace
-	InitElements([]*Element) ESpace
+	InitStates([]State) ESpace
 	InitFields([]string) ESpace
 	InitSpace(ESpace) ESpace
-	Save()
+	Save(...string) error
 
 	/*
-	*	- LoadSpace(string) is mechanism of processing to handle data not clean. No format, after processing data have map structure
-	*	and storaged in mem by Elements 
-	*	- CsvSpace(string) is read all data have Csv structure from the file path. All data is converted to Elements Type.
-	*	- AppendElement(*Element) add new one element to the space.
+	*	- LoadSpace(string) is mechanism of processing to handle data not clean.
+	*	No format, after processing data have map structure and stored in mem by States
+	*	- CsvSpace(string) is read all data have Csv structure from the file path. All data is converted to States Type.
+	*	- AppendState(State) add new one element to the space.
 	*	- FileDocs() return arrays contain each element to string.
 	*/
-	LoadSpace(string)
+	LoadSpace(string) ESpace
+	InitSchema(State) ESpace
+	MongoSpace(string, string) ESpace
 	CsvSpace(string)
-	AppendElement(*Element)
+	AppendState(State)
 	FileDocs() []string
 
 	/*
-	*	- Head(): Return 5 Element in Space.
-	*	- Element(): Return Element Type .
-	*	- ElementField([]string): return all new Elements from Space with []string is sub namefields.
-	*	- SeachElement(string, interface {}): Return Element with key is string and data is interface {}.
-	*	- SetElement(int, *Element): Set element for integer index with new Element.
-	*	- SetElementKeyValue(int, string, interface {}): Set key of integer index element with new value is interface {}.
+	*	- Head(): Return 5 State in Space.
+	*	- State(): Return State Type .
+	*	- FieldsOfState([]string): return all new States from Space with []string is sub namefields.
+	*	- SearchState(string, interface {}): Return State with key is string and data is interface {}.
+	*	- SetState(int, State): Set state for integer index with new State.
+	*	- SetStateKeyValue(int, string, interface {}): Set key of integer index element with new value is interface {}.
 	*/
-	Head() []*Element // 
-	Element() Element // 
-	Elements() []*Element
-	ElementField([]string) []*Element
-	SearchElement(string, interface {}) *Element
-	SetElement(int, *Element)
-	SetElementKeyValue(int, string, interface {})
+	Head() []State //
+	State() State //
+	States() []State
+	FieldsOfState([]string) []State
+	SearchState(string, interface {}) State
+	SetState(int32, State)
+	SetStateKeyValue(int32, string, interface {})
 	
 
 	/*
