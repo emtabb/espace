@@ -4,6 +4,7 @@ import "fmt"
 import "testing"
 import . "github.com/emtabb/espace"
 import . "github.com/emtabb/espace/surface"
+import . "github.com/emtabb/espace/api/element"
 
 func TestSurface(t *testing.T) {
     var st ESpace = Surface()
@@ -17,9 +18,9 @@ func TestSurface(t *testing.T) {
     testRow10["Time"] = "10"
     ele := x.States()
     for _, e := range ele {
-        fmt.Println(e.GetProperty())
+        fmt.Println(e.(*Element).GetProperty())
     }
-    k := ele[8].GetProperty()
+    k := ele[8].(*Element).GetProperty()
     for name := range k{
         success := k[name] == testRow10[name]
         fmt.Println(success)
@@ -29,7 +30,7 @@ func TestSurface(t *testing.T) {
     fmt.Println(y)
     eley := y.States()
     for _, e := range eley {
-        fmt.Println(e.GetProperty())
+        fmt.Println(e.(*Element).GetProperty())
     }
 }
 
@@ -53,7 +54,7 @@ func TestReadBigData(t *testing.T) {
     row, _ := SomeGroup.Shape()
     
     for i := 0; i < row; i++ {
-        fmt.Println(i + 1, "|", SomeGroup.States()[i].ToString())
+        fmt.Println(i + 1, "|", SomeGroup.States()[i].(*Element).ToString())
     }
 
 }
@@ -68,7 +69,7 @@ func TestJoinBigData(t *testing.T) {
     
     row, _ := afterJoin.Shape()
     for i := 0; i < row; i++ {
-        fmt.Println(i + 1, "|", afterJoin.States()[i].ToString())
+        fmt.Println(i + 1, "|", afterJoin.States()[i].(*Element).ToString())
     }
 }
 
