@@ -9,13 +9,12 @@ import (
 )
 
 type Element struct {
-	State
 	element map[string] interface{}
 	label []string
 	dimension int
 }
 
-func (ele *Element) Init() State {
+func (ele *Element) Init() *Element {
 	const SizeDefault = 0
 	ele.label = make([]string, SizeDefault)
 	ele.element = make(map[string] interface {})
@@ -27,7 +26,7 @@ func (ele *Element) InitLabel(labels []string) *Element {
 	return ele
 }
 
-func (ele *Element) Property(element map[string] interface{}) State {
+func (ele *Element) Property(element map[string] interface{}) *Element {
 	for label := range element {
 		ele.element[label] = element[label]
 		ele.dimension++
@@ -35,7 +34,7 @@ func (ele *Element) Property(element map[string] interface{}) State {
 	return ele
 }
 
-func (ele *Element) Field(fieldName string, field interface{}) State {
+func (ele *Element) Field(fieldName string, field interface{}) *Element {
 	ele.element[fieldName] = field
 	return ele
 }
@@ -76,7 +75,7 @@ func (ele *Element) GetProperty() map[string] interface{} {
 	return ele.element
 }
 
-func (ele *Element) Label(labels []string) State {
+func (ele *Element) Label(labels []string) *Element {
 	ele.label = labels[:]
 	return ele
 }
@@ -85,8 +84,8 @@ func (ele *Element) GetLabel() []string {
 	return ele.label
 }
 
-func (ele *Element) ToArray() []State {
-	return []State{ele }
+func (ele *Element) ToArray() States {
+	return new(List).Of(ele)
 }
 
 func (ele *Element) Sum() float64 {

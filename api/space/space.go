@@ -291,7 +291,7 @@ func (s *SpaceStructure) field(fieldName string) *Field {
 		immemField := new(Field).Init().Name(fieldName)
 		fieldData := make([]interface {}, s.numberOfRows)
 		for i, state := range s.States() {
-			fieldData[i] = state.GetField(fieldName)
+			fieldData[i] = state.(*Element).GetField(fieldName)
 		}
 		immemField.Data(fieldData)
 		s.inmemField = append(s.inmemField, immemField)
@@ -349,7 +349,7 @@ func (s *SpaceStructure) FieldsOfState(nameFields []string) []State {
 	for i, state := range s.states {
 		initElement := make([]interface {}, SIZE_DEFAULT)
 		for _, label := range nameFields {
-			initElement = append(initElement, state.GetField(label))
+			initElement = append(initElement, state.(*Element).GetField(label))
 		}
 		fieldStates[i] = new(Element).Init().Label(initField).Property(util.MapCsvJson(initField, initElement))
 	}
@@ -377,7 +377,7 @@ func (s *SpaceStructure) Join(field *Field) (ESpace, error) {
 	s.fieldIndex[name] = s.numberOfColumns
 	s.numberOfColumns++
 	for i := 0; i < s.numberOfRows; i++ {
-		s.states[i] = s.states[i].Label(s.nameFields).Field(name, states[i])
+		s.states[i] = s.states[i].(*Element).Label(s.nameFields).Field(name, states[i])
 	}
 	return s, nil
 }
@@ -394,7 +394,7 @@ func (s *SpaceStructure) Drop(nameFields []string) (ESpace, error) {
 		tempNameFields := make([]string, 0)
 		for i := 0; i < s.numberOfRows; i++ {
 			if position := util.FindPositionArray(field, s.nameFields); position != -1 {
-				s.states[i].Drop(field)
+				s.states[i].(*Element).Drop(field)
 				for i := 0; i < s.numberOfColumns; i++ {
 					if i != position {
 						tempNameFields = append(tempNameFields, s.nameFields[i])
@@ -412,10 +412,10 @@ func (s *SpaceStructure) Drop(nameFields []string) (ESpace, error) {
 
 func (s *SpaceStructure) Reshape() (ESpace, error) {
 	for i, state := range s.states {
-		sum := state.Sum()
+		sum := state.(*Element).Sum()
 		temp := make([]interface {}, s.numberOfColumns)
-		for j, label := range state.GetLabel() {
-			temp[j] = s.states[i].GetField(label).(float64) / sum
+		for j, label := range state.(*Element).GetLabel() {
+			temp[j] = s.states[i].(*Element).GetField(label).(float64) / sum
 		}
 		tempElement := new(Element).
 			Init().
@@ -448,8 +448,8 @@ func (s *SpaceStructure) SearchState(key string, value interface {}) State {
 }
 
 func (s *SpaceStructure) Search(key string, value interface {}) []interface {} {
-	return qugo.Operator().Init(s.states).Filter(func (state State) bool {
-		if state.GetField(key) == value {
+	return qugo.Operator().InitStates(new(List).ByStates(s.states)).Filter(func (state State) bool {
+		if state.(*Element).GetField(key) == value {
 			return true
 		}
 		return false
@@ -461,7 +461,7 @@ func (s *SpaceStructure) SetState(index int32, state State) {
 }
 
 func (s *SpaceStructure) SetStateKeyValue(index int32, key string, value interface{}) {
-	s.states[index] = s.states[index].Field(key, value)
+	s.states[index] = s.states[index].(*Element).Field(key, value)
 }
 
 func (s *SpaceStructure) Save(collection ...string) error {
@@ -473,7 +473,8 @@ func (s *SpaceStructure) Save(collection ...string) error {
 	if s.mongodb != nil {
 		_, err = s.mongodb.
 			Collection(saveCollection).
-			InsertMany(context.TODO(), qugo.Operator().Init(s.states).CollectInterface())
+			InsertMany(context.TODO(), qugo.Operator().
+				InitStates(new(List).ByStates(s.states)).CollectInterface())
 	}
 	return err
 }

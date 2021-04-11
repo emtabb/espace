@@ -16,3 +16,4 @@ app
 # vendor/
 .idea/
 go.sum
+*.DS_Store
