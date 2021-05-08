@@ -1,6 +1,8 @@
 package test
 
-import "fmt"
+import (
+    "fmt"
+)
 import "testing"
 import . "github.com/emtabb/espace"
 import . "github.com/emtabb/espace/surface"
@@ -16,19 +18,19 @@ func TestSurface(t *testing.T) {
     testRow10["Coordinate"] = "9"
     testRow10["Vector"] = "18"
     testRow10["Time"] = "10"
-    ele := x.States()
+    ele := x.Elements()
     for _, e := range ele {
         fmt.Println(e.(*Element).GetProperty())
     }
     k := ele[8].(*Element).GetProperty()
-    for name := range k{
+    for name := range k {
         success := k[name] == testRow10[name]
         fmt.Println(success)
     }
 
     y, _ := x.Group([]string{"Coordinate", "Vector"})
     fmt.Println(y)
-    eley := y.States()
+    eley := y.Elements()
     for _, e := range eley {
         fmt.Println(e.(*Element).GetProperty())
     }
@@ -54,9 +56,15 @@ func TestReadBigData(t *testing.T) {
     row, _ := SomeGroup.Shape()
     
     for i := 0; i < row; i++ {
-        fmt.Println(i + 1, "|", SomeGroup.States()[i].(*Element).ToString())
+        fmt.Println(i + 1, "|", SomeGroup.Elements()[i].(*Element).ToString())
     }
+}
 
+func TestSaveBigDataBigData(t *testing.T) {
+    space := populateData()
+    FieldGroup := []string {"Year", "Units", "Variable_code", "Variable_name", "Variable_category", "Value"}
+    SomeGroup, _ := space.Group(FieldGroup)
+    SomeGroup.Save("./Data.csv")
 }
 
 func TestJoinBigData(t *testing.T) {
@@ -69,7 +77,7 @@ func TestJoinBigData(t *testing.T) {
     
     row, _ := afterJoin.Shape()
     for i := 0; i < row; i++ {
-        fmt.Println(i + 1, "|", afterJoin.States()[i].(*Element).ToString())
+        fmt.Println(i + 1, "|", afterJoin.Elements()[i].(*Element).ToString())
     }
 }
 
