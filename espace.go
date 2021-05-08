@@ -35,6 +35,7 @@ type ESpace interface {
 	*/
 	LoadSpace(string) ESpace
 	InitSchema(State) ESpace
+	LoadModel(interface{}) States
 	MongoSpace(string, string) ESpace
 	CsvSpace(string)
 	AppendState(State)
@@ -50,7 +51,8 @@ type ESpace interface {
 	*/
 	Head() []State //
 	State() State //
-	States() []State
+	States(...int) []State
+	Elements() []State
 	FieldsOfState([]string) []State
 	SearchState(string, interface {}) State
 	SetState(int32, State)

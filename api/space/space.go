@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	. "github.com/emtabb/espace"
 	. "github.com/emtabb/espace/api/constant"
 	. "github.com/emtabb/espace/api/element"
@@ -12,12 +13,15 @@ import (
 	. "github.com/emtabb/field"
 	. "github.com/emtabb/field/src/statistic"
 	"github.com/emtabb/qugo"
+	"github.com/emtabb/qugo/qu/impl"
 	. "github.com/emtabb/state"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -105,10 +109,95 @@ func (s *SpaceStructure) State() State {
 	return e
 }
 
-func (s *SpaceStructure) States() []State {
+func (s *SpaceStructure) States(caps ...int) []State {
+	limit := int32(500)
+	if len(caps) > 0 {
+		limit = int32(caps[0])
+	}
+	return qugo.Operator().InitStates(new(List).ByStates(s.states)).Map(func(state State) State {
+		return state.(*Element).GetProperty()
+	}).Limit(limit).Collect().ToArray()
+}
+
+func (s *SpaceStructure) Elements() []State {
 	return s.states
 }
 
+func contains(arrays []string, str string) bool {
+	for _, v := range arrays {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *SpaceStructure) LoadModel(bindModels interface{}) States {
+
+	bindModelsVal := reflect.ValueOf(bindModels)
+	if bindModelsVal.Kind() != reflect.Ptr {
+		fmt.Errorf("results argument must be a pointer to a slice, but was a %s", bindModelsVal.Kind())
+	}
+
+	sliceVal := bindModelsVal.Elem()
+	if sliceVal.Kind() == reflect.Interface {
+		sliceVal = sliceVal.Elem()
+	}
+
+	if sliceVal.Kind() != reflect.Slice {
+		fmt.Errorf("results argument must be a pointer to a slice, but was a pointer to %s", sliceVal.Kind())
+	}
+
+	elementType := sliceVal.Type().Elem()
+	var index int
+	listState := new(List).Generate()
+	for _, _state := range s.states {
+		mapper := _state.(*Element).GetProperty()
+		if sliceVal.Len() == index {
+			// slice is full
+			newElem := reflect.New(elementType)
+			sliceVal = reflect.Append(sliceVal, newElem.Elem())
+			sliceVal = sliceVal.Slice(0, sliceVal.Cap())
+		}
+
+		newElem := reflect.New(sliceVal.Index(index).Addr().Type()).Elem()
+		newElem.Set(sliceVal.Index(index).Addr())
+
+		modelType := reflect.TypeOf(sliceVal.Index(index).Addr().Interface())
+		log.Println(modelType.String())
+		for i := 0; i < modelType.Elem().NumField(); i++ {
+			f := newElem.Elem().Type().Field(i).Tag.Get("json")
+			if mapper[f] != nil {
+				switch newElem.Elem().Type().Field(i).Type.Kind() {
+				case reflect.String :
+					newElem.Elem().Field(i).SetString(mapper[f].(string))
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64 :
+					newElem.Elem().Field(i).SetInt(mapper[f].(int64))
+				case reflect.Float32, reflect.Float64:
+					newElem.Elem().Field(i).SetFloat(mapper[f].(float64))
+				case reflect.Interface:
+					newElem.Elem().Field(i).Set(reflect.ValueOf(mapper[f]))
+				case reflect.Array:
+					if objectId, ok := mapper[f].(primitive.ObjectID); ok {
+						newElem.Elem().Field(i).Set(reflect.ValueOf(objectId))
+					} else {
+						objectIDS, _:= primitive.ObjectIDFromHex(reflect.ValueOf(objectId).String())
+						newElem.Elem().Field(i).Set(reflect.ValueOf(objectIDS))
+					}
+
+				default:
+					newElem.Elem().Field(i).Set(reflect.ValueOf(""))
+				}
+			}
+		}
+
+		sliceVal.Index(index).Set(newElem.Elem())
+		listState.Add(sliceVal.Index(index))
+		index++
+	}
+	return listState
+}
 
 func (s *SpaceStructure) LoadSpace(collection string) ESpace {
 
@@ -124,7 +213,6 @@ func (s *SpaceStructure) LoadSpace(collection string) ESpace {
 		if err = cursor.All(context.TODO(), &mapJsonData); err != nil {
 			panic(err)
 		}
-
 		s.numberOfRows = int(count)
 		s.numberOfColumns = len(mapJsonData[0])
 
@@ -290,7 +378,7 @@ func (s *SpaceStructure) field(fieldName string) *Field {
 		s.inmemFieldName = append(s.inmemFieldName, fieldName)
 		immemField := new(Field).Init().Name(fieldName)
 		fieldData := make([]interface {}, s.numberOfRows)
-		for i, state := range s.States() {
+		for i, state := range s.Elements() {
 			fieldData[i] = state.(*Element).GetField(fieldName)
 		}
 		immemField.Data(fieldData)
@@ -313,13 +401,10 @@ func (s *SpaceStructure) getFieldDefault() string {
 
 func (s *SpaceStructure) Head() []State {
 	states := make([]State, SIZE_DEFAULT)
-	arrays := util.StringArrayToInterface(s.NameFields())
-	element := new(Element).Init().Label(s.nameFields).Property(util.MapCsvJson(s.nameFields, arrays))
-	states = append(states, element)
+	hello := s.States()
 	for i := 0; i < 5; i++ {
-		states = append(states, s.States()[i])
+		states = append(states, hello[i])
 	}
-
 	return states
 }
 
@@ -471,12 +556,85 @@ func (s *SpaceStructure) Save(collection ...string) error {
 	}
 	var err error = nil
 	if s.mongodb != nil {
-		_, err = s.mongodb.
-			Collection(saveCollection).
-			InsertMany(context.TODO(), qugo.Operator().
-				InitStates(new(List).ByStates(s.states)).CollectInterface())
+		err = s.smartStoreDatabase(saveCollection)
+	} else {
+		err = s.smartStoreFile(saveCollection)
 	}
 	return err
+}
+
+func (s *SpaceStructure) smartStoreDatabase(saveCollection string) error {
+	var err error = nil
+	var ListSave = new(List)
+	var ListUpdate = new(List)
+
+	allAvailableStates := s.States()
+	for _, availableState := range allAvailableStates {
+		if availableState.(map[string] interface{})["_id"] != nil || availableState.(map[string] interface{})["id"] != nil {
+			ListUpdate.Add(availableState)
+		} else {
+			ListSave.Add(availableState)
+		}
+	}
+
+	_, err = s.mongodb.
+		Collection(saveCollection).
+		InsertMany(context.TODO(), qugo.Operator().
+			InitStates(ListSave).CollectInterface())
+
+	for _, replaceState := range ListUpdate.ToArray() {
+		objectId, _ := replaceState.(map[string] interface{})
+		_, err = s.mongodb.
+			Collection(saveCollection).
+			ReplaceOne(context.TODO(), bson.D {{"_id" , objectId["_id"]}}, replaceState.(map[string] interface{}))
+	}
+	return err
+}
+
+func (s *SpaceStructure) smartStoreFile(path string) error {
+	//if strings.HasSuffix(path, ".jpge") {
+	//	image.storeImage(nil, path)
+	//}
+	return s.storeFile(path)
+}
+
+func (s *SpaceStructure) storeFile(path string) error {
+	file, err := os.OpenFile(path, os.O_RDWR, 0644)
+	if err != nil {
+		file, err = os.Create(path)
+	}
+
+	mapToArray := qugo.Operator().InitStates(new(List).ByStates(s.States(qugo.UN_LIMITED))).Map(func(_state State) State {
+		arrayEle := new(List)
+		for _, value := range s.NameFields() {
+			arrayEle.Add(_state.(map[string] interface{})[value])
+		}
+		return arrayEle
+	}).Limit(impl.UN_LIMITED).Collect().ToArray()
+
+	fileData := ""
+	simpleString := make([]string, 0)
+	for i := range mapToArray {
+		subArray := qugo.Operator().InitStates(mapToArray[i].(States)).Limit(impl.UN_LIMITED).CollectInterface()
+		listString := String(subArray)
+		simpleString = append(simpleString, strings.Join(listString, ","))
+
+	}
+	fileData = strings.Join(simpleString, "\n")
+	checkError("Cannot create file", err)
+	defer file.Close()
+
+	bytesWrite, err := file.WriteString(fileData)
+	fmt.Printf("wrote %d bytesWrite\n", bytesWrite)
+
+	file.Sync()
+	return err
+}
+
+func checkError(message string, err error) {
+	if err != nil {
+		log.Fatal(message, err)
+	}
 }
 
 func (s *SpaceStructure) JsonSpace(path string) {

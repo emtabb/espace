@@ -57,11 +57,10 @@ import "github.com/emtabb/espace"
 - Generate the struct implementation with this example:
 ```golang
 import "github.com/emtabb/espace"
-import "github.com/emtabb/espace/surface"
 
 func main() {
-    var someSpace espace.ESpace = surface.Surface()
+    var someSpace espace.ESpace = espace.Surface()
     // or
-    someSpace := surface.Surface()
+    someSpace := espace.Surface()
 }
 ```
