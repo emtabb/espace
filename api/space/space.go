@@ -640,3 +640,7 @@ func checkError(message string, err error) {
 func (s *SpaceStructure) JsonSpace(path string) {
 	
 }
+
+func (s *SpaceStructure) GetMongoDb() *mongo.Database{
+	return s.mongodb
+}
