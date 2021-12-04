@@ -3,6 +3,7 @@ package espace
 import (
 	. "github.com/emtabb/field"
 	. "github.com/emtabb/state"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 /*
@@ -37,6 +38,7 @@ type ESpace interface {
 	InitSchema(State) ESpace
 	LoadModel(interface{}) States
 	MongoSpace(string, string) ESpace
+	GetMongoDb() *mongo.Database
 	CsvSpace(string)
 	AppendState(State)
 	FileDocs() []string
